@@ -2,53 +2,41 @@ import os
 import re
 from telethon import TelegramClient, events
 
-# 🔑 ENV VARIABLES
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
 
 source_channel_1 = int(os.getenv("SOURCE_CHANNEL_1"))
 source_channel_2 = int(os.getenv("SOURCE_CHANNEL_2"))
-
 target_channel = int(os.getenv("TARGET_CHANNEL"))
 
-# 🚀 Client
-client = TelegramClient("session", api_id, api_hash)
+# ⚡ connection optimize
+client = TelegramClient(
+    "session",
+    api_id,
+    api_hash,
+    connection_retries=None
+)
 
-# 🧠 Duplicate रोकने के लिए
-last_code = None
+pattern = re.compile(r'500-CashCode-\d+')
 
-# 🎯 Event listener
 @client.on(events.NewMessage(chats=[source_channel_1, source_channel_2]))
 async def handler(event):
-    global last_code
-
-    # ❌ अगर message में text नहीं है तो skip
-    if not event.raw_text:
-        return
 
     text = event.raw_text
+    if not text:
+        return
 
-    # 🔍 Code detect
-    match = re.search(r'500-CashCode-\d+', text)
+    match = pattern.search(text)
+    if not match:
+        return
 
-    if match:
-        code = match.group()
+    code = match.group()
 
-        # 🚫 duplicate रोकना
-        if code == last_code:
-            return
+    # ⚡ fastest string build
+    msg = f"`{code}`\n" * 6
 
-        last_code = code
+    await client.send_message(target_channel, msg[:-1])  # last newline हटाया
 
-        # ⚡ 6 rows monospace format
-        final_msg = "\n".join([f"`{code}`" for _ in range(6)])
-
-        # 🚀 सिर्फ text भेजेगा (photo नहीं)
-        await client.send_message(target_channel, final_msg)
-
-        print(f"✅ Sent: {code}")
-
-# ▶️ Run
 client.start()
-print("🚀 Bot Running...")
+print("⚡ ULTRA LOW LATENCY BOT RUNNING...")
 client.run_until_disconnected()
