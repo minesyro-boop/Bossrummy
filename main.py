@@ -2,23 +2,30 @@ import os
 import re
 from telethon import TelegramClient, events
 
-# 🔑 API DETAILS
+# 🔑 ENV VARIABLES
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
 
-# 📢 Separate source channels
 source_channel_1 = int(os.getenv("SOURCE_CHANNEL_1"))
 source_channel_2 = int(os.getenv("SOURCE_CHANNEL_2"))
 
-# 🎯 Target channel
 target_channel = int(os.getenv("TARGET_CHANNEL"))
 
 # 🚀 Client
 client = TelegramClient("session", api_id, api_hash)
 
-# 🎯 Event listener (2 channels)
+# 🧠 Duplicate रोकने के लिए
+last_code = None
+
+# 🎯 Event listener
 @client.on(events.NewMessage(chats=[source_channel_1, source_channel_2]))
 async def handler(event):
+    global last_code
+
+    # ❌ अगर message में text नहीं है तो skip
+    if not event.raw_text:
+        return
+
     text = event.raw_text
 
     # 🔍 Code detect
@@ -27,10 +34,16 @@ async def handler(event):
     if match:
         code = match.group()
 
+        # 🚫 duplicate रोकना
+        if code == last_code:
+            return
+
+        last_code = code
+
         # ⚡ 6 rows monospace format
         final_msg = "\n".join([f"`{code}`" for _ in range(6)])
 
-        # 🚀 instant send
+        # 🚀 सिर्फ text भेजेगा (photo नहीं)
         await client.send_message(target_channel, final_msg)
 
         print(f"✅ Sent: {code}")
